@@ -24,6 +24,11 @@ void DeleteFriendHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["msg"] = "Sorry,token过期,删除好友失败，请重新登录";
         LOG_INFO << "DeleteFriendHandler: token has expired - "<< username;
     }
+    else if(!redis.sismember("friends:" + username, friendname))
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "你们还不是好友,无法删除";
+    }
     else
     {
         redis.srem("friends:"+username,friendname);

@@ -23,6 +23,11 @@ void UnBlockFriendHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["msg"] = "抱歉,您的token已过期,请重新登录";
         LOG_INFO << "UnBlockFriendHandler: token has expired! - " << username;
     }
+    else if(!redis.hexists("user:" + friendName, "password"))
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "该用户不存在";
+    }
     else
     {
         redis.srem("blocked:"+username , friendName);

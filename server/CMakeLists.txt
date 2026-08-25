@@ -35,7 +35,6 @@ add_executable(chat_server              # 生成的可执行文件名
     ../BusinessLogic/RemoveGroupAdminHandler.cc
     ../BusinessLogic/ApproveJoinHandler.cc
     ../BusinessLogic/RemoveGroupMembersHandler.cc  
-    ../BusinessLogic/AIclient.cc
     ../BusinessLogic/QueryHistoryHandler.cc
     ../BusinessLogic/QueryHistoryHandler.cc
     ../BusinessLogic/MySqlClient.cc   

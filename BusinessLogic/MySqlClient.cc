@@ -4,7 +4,15 @@
 #include <string>
 #include <mysql/mysql.h>
 #include <cstdio>
-
+#include <algorithm>
+//转义代码
+std::string Esc(MYSQL* conn, const std::string& s)
+{
+    std::string out(s.size()*2+1, '\0');
+    size_t n = mysql_real_escape_string(conn, &out[0], s.c_str(), s.size());
+    out.resize(n);
+    return out;
+}
 MySqlClient::MySqlClient(std::string host , std::string username,std::string password , std::string DataBaseName,int port)
         :_host(host)
         ,_username(username),
@@ -30,8 +38,8 @@ bool MySqlClient::connect()
     }
     if(mysql_set_character_set(_conn , "utf8mb4") == 0)
     {
-        std::string order = "CREATE TABLE IF NOT EXISTS ChatHistory(id INT AUTO_INCREMENT PRIMARY KEY,from_user VARCHAR(128),to_user VARCHAR(128),to_group VARCHAR(128),content TEXT,created_at DATETIME DEFAULT CURRENT_TIMESTAMP)";
-        std::string order0="CREATE TABLE IF NOT EXISTS OFFLINE(id INT AUTO_INCREMENT PRIMARY KEY,from_user VARCHAR(128), to_user VARCHAR(128) ,  to_group VARCHAR(128),content TEXT,  created_at DATETIME DEFAULT CURRENT_TIMESTAMP)";
+        std::string order = "CREATE TABLE IF NOT EXISTS ChatHistory(id INT AUTO_INCREMENT PRIMARY KEY,from_user VARCHAR(128),to_user VARCHAR(128),to_group VARCHAR(128),content MEDIUMTEXT,created_at DATETIME DEFAULT CURRENT_TIMESTAMP)";
+        std::string order0="CREATE TABLE IF NOT EXISTS OFFLINE(id INT AUTO_INCREMENT PRIMARY KEY,from_user VARCHAR(128), to_user VARCHAR(128) ,  to_group VARCHAR(128),content MEDIUMTEXT,  created_at DATETIME DEFAULT CURRENT_TIMESTAMP)";
         mysql_query(_conn , order.c_str());
         mysql_query(_conn,order0.c_str());
         return true;
@@ -46,8 +54,7 @@ bool MySqlClient::SaveHistory(Json::Value body,std::string username,std::string 
         Json::StreamWriterBuilder builder;
         builder.settings_["emitUTF8"] = true;          // 关键：输出 UTF-8 明文，不转义
         std::string JsonStr = Json::writeString(builder, body);
-        
-        std::string order2 = "INSERT INTO ChatHistory(from_user , to_user , content , to_group) VALUES('" + username + "' , '" +  friendname + "' , '"+JsonStr+"' , '" + groupid+"')";
+        std::string order2 = "INSERT INTO ChatHistory(from_user,to_user,content,to_group) VALUES('"+ Esc(_conn, username) + "','" + Esc(_conn, friendname) + "','"+ Esc(_conn, JsonStr) + "','" + Esc(_conn, groupid) + "')";
         int judge1 = mysql_query(_conn ,order2.c_str());
         if(judge1 == 0)
         {
@@ -68,7 +75,7 @@ bool MySqlClient::SaveHistory(Json::Value body,std::string username,std::string 
         //SELECT from_user , content,created_at FROM ChatHistory
         //WHERE (from_user = username AND to_user = FriendName) OR (from_user =FriendName AND to_user = username)
         //ORDER BY created_at DESC LIMIT 300;
-        std::string order3 = "SELECT from_user , content , created_at FROM ChatHistory WHERE (from_user = '"+username+"' AND to_user = '"+FriendName+"') OR (from_user = '"+FriendName+"' AND to_user = '"+username+"') ORDER BY created_at DESC LIMIT " + std::to_string(limit);
+        std::string order3 = "SELECT from_user , content , created_at FROM ChatHistory WHERE (from_user = '"+username+"' AND to_user = '"+FriendName+"') OR (from_user = '"+FriendName+"' AND to_user = '"+username+"') ORDER BY id DESC LIMIT " + std::to_string(limit);
         int judge2 = mysql_query(_conn , order3.c_str());
         if(judge2 != 0) return std::vector<Json::Value>();
         MYSQL_RES* result = mysql_store_result(_conn);
@@ -92,6 +99,7 @@ bool MySqlClient::SaveHistory(Json::Value body,std::string username,std::string 
            JPH.push_back(History);            
         }
         mysql_free_result(result);
+        std::reverse(JPH.begin(), JPH.end());
         return JPH;
 
     }
@@ -104,7 +112,7 @@ bool MySqlClient::SaveHistory(Json::Value body,std::string username,std::string 
     {
         limit =300;
     }
-    std::string order5 = "SELECT from_user ,to_group,content, created_at FROM ChatHistory WHERE (to_group = " + groupid + ") ORDER BY created_at DESC LIMIT "+ std::to_string(limit);
+    std::string order5 = "SELECT from_user ,to_group,content, created_at FROM ChatHistory WHERE (to_group = " + groupid + ") ORDER BY id DESC LIMIT "+ std::to_string(limit);
     int judge5 = mysql_query(_conn ,order5.c_str());
     if(judge5 != 0)
     {
@@ -135,6 +143,7 @@ bool MySqlClient::SaveHistory(Json::Value body,std::string username,std::string 
           
     }
     mysql_free_result(result);
+    std::reverse(JGH.begin(), JGH.end());
     return JGH;
   }
 
@@ -145,7 +154,7 @@ bool MySqlClient::SaveOffline(Json::Value body,std::string username ,std::string
     Json::StreamWriterBuilder builder;
     builder.settings_["emitUTF8"] = true;   
     std::string JsonStr = Json::writeString(builder, body);
-    std::string order6 = "INSERT INTO OFFLINE(from_user,to_user,content , to_group) VALUES('" + username +"','" + friendname+"','"+JsonStr+"', '"+ groupid+ "')";
+    std::string order6 = "INSERT INTO OFFLINE(from_user,to_user,content , to_group) VALUES('" + Esc(_conn, username) +"','" + Esc(_conn, friendname)+"','"+Esc(_conn, JsonStr)+"', '"+ Esc(_conn, groupid)+ "')";
      if(0 == mysql_query(_conn,order6.c_str()))
      {
         return true;
@@ -156,7 +165,7 @@ bool MySqlClient::SaveOffline(Json::Value body,std::string username ,std::string
 std::vector<Json::Value> MySqlClient::PushOffline(std::string username)
     {
         std::lock_guard<std::mutex> lock(_mutex);
-        std::string order7 = "SELECT from_user , to_group,content , created_at FROM OFFLINE WHERE to_user = '"+username+"' ORDER BY created_at DESC";
+        std::string order7 = "SELECT from_user , to_group,content , created_at FROM OFFLINE WHERE to_user = '"+username+"' ORDER BY id ASC";
         int judge7 = mysql_query(_conn , order7.c_str());
         if(judge7 != 0) exit(1);
         MYSQL_RES* result = mysql_store_result(_conn);

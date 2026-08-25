@@ -35,10 +35,16 @@ void LeaveGroupHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["status"] = "error";
         response.body["msg"] = "抱歉,您不是群成员,无法退群!";
         LOG_INFO << "LeaveGroupHandler:the user isn't in the group! - " << username;
+    }else if(redis.hget("group:" + groupid , "owner") == username)
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "您是群主,不能直接退群,请先解散群";
+        LOG_INFO << "LeaveGroupHandler:owner can't leave! - " << username;
     }
     else
     {
         redis.srem("group:" + groupid + ":members" , username);
+        redis.srem("group:" + groupid + ":admins" , username);
         redis.srem("user:" + username + ":groups" , groupid);
         std::string owner = redis.hget("group:" + groupid,"owner");
         auto ownerconn = server->GetconnByUser(owner);

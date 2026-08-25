@@ -39,8 +39,7 @@ ChatServer::ChatServer(muduo::net::EventLoop* loop,
                        const muduo::net::InetAddress& listenAddr)
     :_loop(loop),
     _server(loop,listenAddr,"ChatServer"),
-    _redis("127.0.0.1",6379),
-    _ai("sk-e41f1cf4fdf249c8ace97ceda5027a06")
+    _redis("127.0.0.1",6379)
     ,_mysql("127.0.0.1","chat","2643534502","chatroom",3306)
     ,_email("2643534502@qq.com","uivwjgtnfouweajb")
 {
@@ -140,11 +139,6 @@ muduo::net::TcpConnectionPtr ChatServer::GetconnByUser(const std::string& userna
 }
 void ChatServer::start()
 {
-    if(!_redis.hexists("user:AI_bot","password"))
-    {
-        _redis.hset("user:AI_bot" , "password" , "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbbhkjhkjlhrgftiurehfkl;HFBBUHKGJHVFUGguygvjhgkVHJYGIUGHJKNBDAJKFRGHEOIGHJASOINGAEOGUAEOIGJOEUIJRHGevbgSFrfg");
-    }
-
     _heartbeatTimerId  = _loop->runEvery(HeartBeatInterval,std::bind(&ChatServer::onHeartbeat,this));
     //
     _server.setThreadNum(4);
@@ -181,6 +175,8 @@ void ChatServer::onMessage(const muduo::net::TcpConnectionPtr& conn,
                            muduo::net::Buffer* buf,
                            muduo::Timestamp time)
 {
+    while(1)
+    {
     MyProtoMsg *outMsg = nullptr;
     int result = _decode.decode(buf,outMsg);
 if(result == 0) return;
@@ -191,10 +187,10 @@ if(type == static_cast<uint16_t>(MessageType::HEARTBEAT))
 {
     _LastPong[conn] = muduo::Timestamp::now();
     delete outMsg;
-    return;
+    continue;
 }
     _router.dispatch(type,conn,*outMsg,this);
-    delete outMsg;
+    delete outMsg;}
 }
 
 
@@ -232,6 +228,9 @@ void ChatServer::registerHandlers()
     _router.on(107,AcceptFriendHandler);
     _router.on(108,RejectFriendHandler);
     _router.on(109,LoginByCodeHandler);
+    _router.on(110,ListFilesHandler);
+    _router.on(111,DownloadFileHandler);
+    _router.on(112,ListFriendRequestsHandler);
 }
 
 void ChatServer::onHeartbeat()

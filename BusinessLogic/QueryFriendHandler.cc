@@ -32,7 +32,8 @@ void QueryFriendHandler(const muduo::net::TcpConnectionPtr& conn,
         Json::Value FriendsList(Json::arrayValue);
         for(const std::string& f : FriendsLine)
         {
-            FriendsList.append(f);
+            std::string tag = server->TrueOnline(f) ? " [在线]" : " [离线]";
+            FriendsList.append(f + tag);
         }
         response.body["status"] = "ok";
         response.body["msg"] = "好友列表:";

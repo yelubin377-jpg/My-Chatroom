@@ -30,15 +30,23 @@ void QueryHistoryHandler(const muduo::net::TcpConnectionPtr& conn,
         LOG_INFO << "QueryHIstoryHandler:token has expired - "  << username;
     }else if(groupname.empty()) //查私
     {
-        std::vector<Json::Value> getGPH = server->mysql().GPH(username,Friendname,count); //后续补长度，不小心写死300；
-        Json::Value result;
-        for(int i = 0; i < getGPH.size() ; i++)
+        if(Friendname.empty())                    
         {
-            result.append(getGPH[i]);   //串串儿
+            response.body["status"] = "error";
+            response.body["msg"] = "对方用户名不能为空";
         }
-        response.body["status"] = "ok";
-        response.body["msg"] = result.empty() ? "没有历史记录" : "查询成功 ! ";
-        response.body["history"] = result;
+        else
+        {
+            std::vector<Json::Value> getGPH = server->mysql().GPH(username,Friendname,count); //后续补长度，不小心写死300；
+            Json::Value result;
+            for(int i = 0; i < getGPH.size() ; i++)
+            {
+                result.append(getGPH[i]);   //串串儿
+            }
+            response.body["status"] = "ok";
+            response.body["msg"] = result.empty() ? "没有历史记录" : "查询成功 ! ";
+            response.body["history"] = result;
+        }
     }
     else
     {

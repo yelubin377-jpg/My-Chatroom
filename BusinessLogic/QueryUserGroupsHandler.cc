@@ -30,6 +30,7 @@ void QueryUserGroupsHandler(const muduo::net::TcpConnectionPtr& conn,
     else
     {
         ves groupid = redis.smembers("user:"+username+":groups");
+        response.body["groups"] = Json::Value(Json::arrayValue);
         for(size_t i = 0;i < groupid.size() ; i++)
         {
             std::string name = redis.hget("group:" + groupid[i] , "name"); 

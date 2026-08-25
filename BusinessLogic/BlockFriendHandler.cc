@@ -25,6 +25,11 @@ void BlockFriendHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["msg"] = "token无效,请重新登录!";
         LOG_INFO << "BlockFriendHandler: token has expired! - " << username;
     }
+    else if(!redis.hexists("user:" + friendname, "password"))
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "该用户不存在,无法屏蔽";
+    }
     else
     {
         redis.sadd("blocked:" + username , friendname);

@@ -36,6 +36,7 @@ void GroupChatHandler(const muduo::net::TcpConnectionPtr& conn,
     }
     else
     {
+        const_cast<MyProtoMsg&>(msg).body["from"] = username;
         ves members = redis.smembers("group:" + groupid + ":members");
         for(size_t i = 0;i < members.size(); i++)
         {
@@ -53,9 +54,8 @@ void GroupChatHandler(const muduo::net::TcpConnectionPtr& conn,
                 }
                 else
                 {
-                    const_cast<MyProtoMsg&>(msg).body["from"] = username;
                     server->mysql().SaveOffline(msg.body,  username,members[i],  groupid);
-            }
+                }
             }
         }
         response.body["status"] = "ok";

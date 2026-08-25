@@ -2,8 +2,7 @@
 #include <stdint.h>
 
 enum class MessageType : uint16_t
-{
-    ECHO = 1,        
+{      
     LOGIN = 66,
     REGISTER = 666,
     LOGOUT = 68,
@@ -37,8 +36,10 @@ enum class MessageType : uint16_t
     RESET_PASSWORD = 106,
     ACCEPT_FRIEND = 107,
     REJECT_FRIEND = 108,
-    LOGIN_BY_CODE = 109
-
+    LOGIN_BY_CODE = 109,
+    FILE_LIST = 110,
+    FILE_DOWNLOAD = 111,
+    LIST_FRIEND_REQUESTS = 112
 
 
 };

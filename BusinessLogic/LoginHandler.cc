@@ -46,7 +46,7 @@ void HandleLogin(const muduo::net::TcpConnectionPtr& conn,
             
             std::random_device rd;
             std::string token = std::to_string(rd()) + std::to_string(rd()) + std::to_string(rd());
-           redis.set("token:" + token,username); //依旧k + f
+            redis.set("token:" + token,username); //依旧k + f
             redis.expire("token:" + token , 86400);//k+ 秒
             judger = 1;
             response.body["status"] = "ok";
@@ -54,7 +54,6 @@ void HandleLogin(const muduo::net::TcpConnectionPtr& conn,
             response.body["token"] = token;
             LOG_INFO << "LoginHandler: success perfectly - "<< username << "- token = " << token;
             server -> AddOnlineUser(username,conn);
-            
         }   
     }
     MyProtoEncode encoder;
@@ -89,6 +88,19 @@ void HandleLogin(const muduo::net::TcpConnectionPtr& conn,
             MyProtoEncode enc;
             uint32_t len = 0;
             uint8_t* data = enc.encode(&noti, len);
+            conn->send(data, len);
+            delete[] data;
+        }
+        std::vector<std::string> files = redis.lrange("file_list:" + username, 0, -1);
+        if(!files.empty())
+        {
+            MyProtoMsg fileNoti;
+            fileNoti.head.server = 911;
+            fileNoti.body["from"] = "system";
+            fileNoti.body["msg"] = "你有 " + std::to_string(files.size()) + " 个文件可下载,请到 文件->下载 查看";
+            MyProtoEncode enc;
+            uint32_t len = 0;
+            uint8_t* data = enc.encode(&fileNoti, len);
             conn->send(data, len);
             delete[] data;
         }

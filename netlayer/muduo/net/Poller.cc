@@ -27,7 +27,7 @@ void Poller::updateChannel(Channel* channel)
     struct epoll_event ev;
     ev.events = channel->events();
     ev.data.ptr = channel;
-    ::epoll_ctl(_epollfd, op, fd, &ev);
+    ::epoll_ctl(_epollfd, op, fd, &ev);//
     _channels[fd] = channel;
 }
 

@@ -6,7 +6,6 @@ redisClient :: redisClient(const std::string& host,int port)
     ,_ctx(nullptr)
 {
 }
-//?
 redisClient::~redisClient()
 {
     if(_ctx)

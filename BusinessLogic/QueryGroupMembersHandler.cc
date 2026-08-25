@@ -30,17 +30,17 @@ void QueryGroupMembersHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["msg"] = "token已过期, 请重新登录！";
         LOG_INFO << "QueryGroupMembersHandler:token has expired - "  << username;
     }
-    else if(!redis.sismember("group:" + groupid + ":members" , username))
-    {
-        response.body["status"] = "error";
-        response.body["msg"] = "抱歉，您还不是群成员，无法调取";
-        LOG_INFO << "QueryGroupMembersHandler:user isn't in the group! - " << username << ":" <<groupname;
-    }
     else if(!redis.exists("group:" + groupid))
     {
         response.body["status"] = "error";
         response.body["msg"] = "抱歉，你查询的群不存在!";
         LOG_INFO << "QueryGroupMembersHandler: the group doesn't exist ! - " << username << ":" << groupname;
+    }
+    else if(!redis.sismember("group:" + groupid + ":members" , username))
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "抱歉，您还不是群成员，无法调取";
+        LOG_INFO << "QueryGroupMembersHandler:user isn't in the group! - " << username << ":" <<groupname;
     }
     else
     {

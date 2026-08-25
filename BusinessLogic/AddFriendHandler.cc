@@ -31,6 +31,12 @@ void AddFriendHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["msg"] = "不能添加自己为好友";
         LOG_INFO << "AddFriendHandler: can't add yourself - " << username;
     }
+    else if(!redis.hexists("user:" + FriendName, "password"))
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "该用户不存在,无法发送好友申请";
+        LOG_INFO << "AddFriendHandler: user doesn't exist - " << FriendName;
+    }
     else 
     {
         redis.sadd("friend_request:"+ FriendName, username);
@@ -58,4 +64,33 @@ void AddFriendHandler(const muduo::net::TcpConnectionPtr& conn,
     delete[] data;
 
 
+}
+void ListFriendRequestsHandler(const muduo::net::TcpConnectionPtr& conn,
+                               const MyProtoMsg& msg,
+                               void* ctx)
+{
+    ChatServer* server = static_cast<ChatServer*>(ctx);
+    redisClient& redis = server->redis();
+    MyProtoMsg response;
+    response.head.server = msg.head.server;
+    std::string username = redis.get("token:" + msg.body["token"].asString());
+    if(username.empty())
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "token过期,请重新登录";
+    }
+    else
+    {
+        std::vector<std::string> requests = redis.smembers("friend_request:" + username);
+        std::string listStr;
+        for(size_t i = 0; i < requests.size(); i++)
+            listStr += " " + std::to_string(i+1) + ". " + requests[i] + "\n";
+        response.body["status"] = "ok";
+        response.body["msg"] = requests.empty() ? "没有待处理的好友申请" : ("待处理的好友申请:\n" + listStr);
+    }
+    MyProtoEncode encoder;
+    uint32_t len = 0;
+    uint8_t* data = encoder.encode(&response, len);
+    conn->send(data, len);
+    delete[] data;
 }

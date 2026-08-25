@@ -37,6 +37,12 @@ void RemoveGroupAdminHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["msg"] = "抱歉，该用户不是管理员,无法移除";
         LOG_INFO << "RemoveGroupAdminHandler:user isn't the admin ! - "<<target << ":" <<groupname;
     }
+    else if(redis.hget("group:" + groupid , "owner") == target)
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "不能移除群主";
+        LOG_INFO << "RemoveGroupMembersHandler:can't remove owner - " << target;
+    }
     else
     {
         redis.srem("group:" + groupid + ":admins" , target);

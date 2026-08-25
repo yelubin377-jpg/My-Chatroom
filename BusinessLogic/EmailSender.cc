@@ -37,6 +37,9 @@ bool EmailSender::send(const std::string& to , const std::string& subject , cons
 
 
     curl_easy_setopt(curl , CURLOPT_URL , "smtps://smtp.qq.com:465");
+    curl_easy_setopt(curl , CURLOPT_SSLVERSION , CURL_SSLVERSION_TLSv1_2);
+    curl_easy_setopt(curl , CURLOPT_SSL_VERIFYPEER , 0L);
+    curl_easy_setopt(curl , CURLOPT_SSL_VERIFYHOST , 0L);
     curl_easy_setopt(curl , CURLOPT_USERNAME , _fromEmail.c_str());
     curl_easy_setopt(curl , CURLOPT_PASSWORD , _authCode.c_str());
     curl_easy_setopt(curl , CURLOPT_LOGIN_OPTIONS , "AUTH=LOGIN");

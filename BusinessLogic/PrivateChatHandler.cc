@@ -7,7 +7,6 @@
 #include <string>
 #include <cstring>
 #include <string.h>
-#include "AIclient.h"
 #include "MySqlClient.h"
 void PrivateChatHandler(const muduo::net::TcpConnectionPtr& conn,
                         const MyProtoMsg& msg,
@@ -27,7 +26,7 @@ void PrivateChatHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["msg"] = "token过期 , 请重新登录";
         LOG_INFO << "PrivateChatHandler:token has expired ! - " << username;
     }
-    else if(FriendName != "AI_bot" && !redis.sismember("friends:"+username , FriendName))
+    else if( !redis.sismember("friends:"+username , FriendName))
     {
         response.body["status"] = "error";
         response.body["msg"] = "抱歉,您和他/她还不是好友";
@@ -41,16 +40,6 @@ void PrivateChatHandler(const muduo::net::TcpConnectionPtr& conn,
     }    
     else
     {
-        if(FriendName == "AI_bot")
-        {
-            std::string userMsg = msg.body["msg"].asString();
-            std::string reply = server->ai().chat(userMsg);
-            response.body["status"] = "ok";
-            response.body["msg"] = reply;
-            server->mysql().SaveHistory(msg.body, username  , FriendName,"0");
-        }
-        else
-        {
             auto Friendconn = server->GetconnByUser(FriendName);
             if(Friendconn)
             {
@@ -70,7 +59,7 @@ void PrivateChatHandler(const muduo::net::TcpConnectionPtr& conn,
             response.body["msg"] = "message已发送"; 
             server->mysql().SaveHistory(msg.body ,username,FriendName,"0");
             LOG_INFO << "PrivateChatHandler: - " << username << "to - " << FriendName; 
-        }
+        
     }
     MyProtoEncode encoder;
     uint32_t len = 0;

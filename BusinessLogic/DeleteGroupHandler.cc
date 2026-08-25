@@ -52,11 +52,12 @@ void DeleteGroupHandler(const muduo::net::TcpConnectionPtr& conn,
                 delete[] data;
             }
         }
+        std::string name = redis.hget("group:" + GroupId,"name");
         redis.del("group:"+GroupId);
         redis.del("group:"+GroupId + ":members");
         redis.del("group:"+ GroupId + ":admins");
-        std::string groupname = redis.hget("group:" + GroupId,"name");
-        redis.del("groupname:"+ groupname);
+        redis.del("group:"+ GroupId + ":pending");
+        redis.del("groupname:"+ name);
         response.body["status"] = "ok";
         response.body["msg"] = "群聊解散成功";
         LOG_INFO << "DeleteGroupHandler: success ! - " << username << ":groupname:"<< groupname << "has already disbanded !";

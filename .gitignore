@@ -1,3 +1,7 @@
 build/
 .vscode/
 *.tar
+*.md
+Dockerfile
+*MuduoApplication/
+client(abandoned)/

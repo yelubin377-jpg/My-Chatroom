@@ -29,6 +29,11 @@ void LoginByCodeHandler(const muduo::net::TcpConnectionPtr& conn,
         response.body["status"] = "error";
         response.body["msg"] = "验证码错误或已过期";
     }
+    else if(server->TrueOnline(username))
+    {
+        response.body["status"] = "error";
+        response.body["msg"] = "该账号已在其他设备登录,请先退出";
+    }
     else
     {
         std::random_device rd;

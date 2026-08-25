@@ -4,6 +4,7 @@
 #include "../server/ChatServer.h"
 #include "redisClient.h"
 #include <muduo/base/Logging.h>
+#include <vector>
 
 
 void CreateGroupHandler(const muduo::net::TcpConnectionPtr& conn,
@@ -34,17 +35,47 @@ void CreateGroupHandler(const muduo::net::TcpConnectionPtr& conn,
     }
     else
     {
-        std::string groupId = redis.incr("groups:counter");
-        redis.set("groupname:" + GroupName , groupId);
-        redis.hset("group:" + groupId , "owner" , username);
-        redis.hset("group:" + groupId , "name" , GroupName);
-        redis.sadd("group:" + groupId + ":members" , username);
-        redis.sadd("group:" + groupId + ":admins" , username);
-        redis.sadd("user:" + username + ":groups" , groupId);
-        response.body["status"] = "ok";
-        response.body["msg"] = "创建群聊成功! 已将您的身份设置为群主";
-        response.body["group"] = GroupName;
-        LOG_INFO << "CreateGroupHandler: successful ! - " << username << "build - " << GroupName;
+        const Json::Value& members = msg.body["members"];
+        if(members.size() < 2)
+        {
+            response.body["status"] = "error";
+            response.body["msg"] = "建群至少需要3人(群主+2个初始成员)";
+        }
+        else
+        {
+            std::vector<std::string> ok;
+            for(int i = 0; i < (int)members.size(); i++)
+            {
+                std::string m = members[i].asString();
+                if(!redis.sismember("friends:" + username, m))
+                {
+                    response.body["status"] = "error";
+                    response.body["msg"] = m + " 不是你的好友,建群失败";
+                    ok.clear();
+                    break;
+                }
+                ok.push_back(m);
+            }
+            if(!ok.empty())
+            {
+                std::string groupId = redis.incr("groups:counter");
+                redis.set("groupname:" + GroupName , groupId);
+                redis.hset("group:" + groupId , "owner" , username);
+                redis.hset("group:" + groupId , "name" , GroupName);
+                redis.sadd("group:" + groupId + ":members" , username);
+                redis.sadd("group:" + groupId + ":admins" , username);
+                redis.sadd("user:" + username + ":groups" , groupId);
+                for(size_t i = 0; i < ok.size(); i++)
+                {
+                    redis.sadd("group:" + groupId + ":members" , ok[i]);
+                    redis.sadd("user:" + ok[i] + ":groups" , groupId);
+                }
+                response.body["status"] = "ok";
+                response.body["msg"] = "创建群聊成功! 已将您的身份设置为群主";
+                response.body["group"] = GroupName;
+                LOG_INFO << "CreateGroupHandler: successful ! - " << username << "build - " << GroupName;
+            }
+        }
     }
     MyProtoEncode encoder;
     uint32_t len = 0;
