@@ -23,6 +23,9 @@ MySqlClient::MySqlClient(std::string host , std::string username,std::string pas
 {}
 MySqlClient::~MySqlClient()
 {
+    _running = false;
+    _queueCond.notify_all();
+    if(_writerThread.joinable()) _writerThread.join();
     if(nullptr !=_conn){mysql_close(_conn);_conn = nullptr;}
 }
 
@@ -42,6 +45,8 @@ bool MySqlClient::connect()
         std::string order0="CREATE TABLE IF NOT EXISTS OFFLINE(id INT AUTO_INCREMENT PRIMARY KEY,from_user VARCHAR(128), to_user VARCHAR(128) ,  to_group VARCHAR(128),content MEDIUMTEXT,  created_at DATETIME DEFAULT CURRENT_TIMESTAMP)";
         mysql_query(_conn , order.c_str());
         mysql_query(_conn,order0.c_str());
+        _running = true;
+        _writerThread = std::thread(&MySqlClient::writerLoop, this);
         return true;
     }
     else return false;
@@ -49,20 +54,20 @@ bool MySqlClient::connect()
 }
 
 bool MySqlClient::SaveHistory(Json::Value body,std::string username,std::string friendname,std::string groupid)
-     {
-        std::lock_guard<std::mutex> lock(_mutex);
-        Json::StreamWriterBuilder builder;
-        builder.settings_["emitUTF8"] = true;          // 关键：输出 UTF-8 明文，不转义
-        std::string JsonStr = Json::writeString(builder, body);
-        std::string order2 = "INSERT INTO ChatHistory(from_user,to_user,content,to_group) VALUES('"+ Esc(_conn, username) + "','" + Esc(_conn, friendname) + "','"+ Esc(_conn, JsonStr) + "','" + Esc(_conn, groupid) + "')";
-        int judge1 = mysql_query(_conn ,order2.c_str());
-        if(judge1 == 0)
-        {
-            return true;
-        }
-        else return false;
-        
-     }
+{
+    WriteItem item;
+    item.body = body;
+    item.username = username;
+    item.friendname = friendname;
+    item.groupid = groupid;
+    item.offline = false;
+    {
+        std::lock_guard<std::mutex> lock(_queueMutex);
+        _writeQueue.push(item);
+    }
+    _queueCond.notify_one();
+    return true;
+}
     std::vector<Json::Value> MySqlClient::GPH(std::string username,  std::string FriendName ,int limit)
     {
         std::lock_guard<std::mutex> lock(_mutex);
@@ -150,17 +155,18 @@ bool MySqlClient::SaveHistory(Json::Value body,std::string username,std::string 
 
 bool MySqlClient::SaveOffline(Json::Value body,std::string username ,std::string friendname  ,std::string groupid)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
-    Json::StreamWriterBuilder builder;
-    builder.settings_["emitUTF8"] = true;   
-    std::string JsonStr = Json::writeString(builder, body);
-    std::string order6 = "INSERT INTO OFFLINE(from_user,to_user,content , to_group) VALUES('" + Esc(_conn, username) +"','" + Esc(_conn, friendname)+"','"+Esc(_conn, JsonStr)+"', '"+ Esc(_conn, groupid)+ "')";
-     if(0 == mysql_query(_conn,order6.c_str()))
-     {
-        return true;
-     }
-     else return false;
-
+    WriteItem item;
+    item.body = body;
+    item.username = username;
+    item.friendname = friendname;
+    item.groupid = groupid;
+    item.offline = true;
+    {
+        std::lock_guard<std::mutex> lock(_queueMutex);
+        _writeQueue.push(item);
+    }
+    _queueCond.notify_one();
+    return true;
 }
 std::vector<Json::Value> MySqlClient::PushOffline(std::string username)
     {
@@ -204,3 +210,39 @@ bool MySqlClient::ClearOffline(std::string username)
     return true;   
 }
 
+void MySqlClient::writerLoop()
+{
+    while(_running)
+    {
+        std::vector<WriteItem> batch;
+        {
+            std::unique_lock<std::mutex> lock(_queueMutex);
+            _queueCond.wait(lock, [this]{ return !_writeQueue.empty() || !_running; });
+            while(!_writeQueue.empty() && batch.size() < 500)
+            {
+                batch.push_back(_writeQueue.front());
+                _writeQueue.pop();
+            }
+        }
+        if(batch.empty())
+        {
+            if(!_running) break;
+            continue;
+        }
+        std::lock_guard<std::mutex> lock(_mutex);
+        mysql_query(_conn, "BEGIN");
+        for(const WriteItem& item : batch)
+        {
+            Json::StreamWriterBuilder builder;
+            builder.settings_["emitUTF8"] = true;
+            std::string JsonStr = Json::writeString(builder, item.body);
+            std::string sql;
+            if(item.offline)
+                sql = "INSERT INTO OFFLINE(from_user,to_user,content , to_group) VALUES('" + Esc(_conn, item.username) +"','" + Esc(_conn, item.friendname)+"','"+Esc(_conn, JsonStr)+"', '"+ Esc(_conn, item.groupid)+ "')";
+            else
+                sql = "INSERT INTO ChatHistory(from_user,to_user,content,to_group) VALUES('"+ Esc(_conn, item.username) + "','" + Esc(_conn, item.friendname) + "','"+ Esc(_conn, JsonStr) + "','" + Esc(_conn, item.groupid) + "')";
+            mysql_query(_conn, sql.c_str());
+        }
+        mysql_query(_conn, "COMMIT");
+    }
+}

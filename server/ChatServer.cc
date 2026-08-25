@@ -153,6 +153,7 @@ void ChatServer::onConnection(const muduo::net::TcpConnectionPtr& conn)
              << (conn->connected() ? "UP" : "DOWN");
     if(conn->connected())
     {
+        std::lock_guard<std::mutex> lock(_connMutex);
         _conns.insert(conn);
         _LastPong[conn] = muduo::Timestamp::now();
     }
@@ -167,6 +168,7 @@ void ChatServer::onConnection(const muduo::net::TcpConnectionPtr& conn)
                 _connToUser.erase(it);
             }
         }
+        std::lock_guard<std::mutex> lock(_connMutex);
         _conns.erase(conn);
         _LastPong.erase(conn);
     }
@@ -185,7 +187,10 @@ if(result == 0) return;
     uint16_t type = outMsg->head.server;
 if(type == static_cast<uint16_t>(MessageType::HEARTBEAT))
 {
-    _LastPong[conn] = muduo::Timestamp::now();
+    {
+        std::lock_guard<std::mutex> lock(_connMutex);
+        _LastPong[conn] = muduo::Timestamp::now();
+    }
     delete outMsg;
     continue;
 }
@@ -238,30 +243,36 @@ void ChatServer::onHeartbeat()
     muduo::Timestamp now = muduo::Timestamp::now();
     std::vector<muduo::net::TcpConnectionPtr> deadConns;
 
-    for(auto it = _LastPong.begin();it != _LastPong.end();)
-    {
-        double elapsed = now.secondsSinceEpoch() - it->second.secondsSinceEpoch();
-        if(elapsed > HeartBeatTimeout)
+     {
+        std::lock_guard<std::mutex> lock(_connMutex);
+        for(auto it = _LastPong.begin();it != _LastPong.end();)
         {
-            LOG_INFO << "Heartbeat timeout:" << it->first->peerAddress().toIpPort();
-            deadConns.push_back(it->first);
-
+            double elapsed = now.secondsSinceEpoch() - it->second.secondsSinceEpoch();
+            if(elapsed > HeartBeatTimeout)
             {
-                std::lock_guard<std::mutex> lock(_onlineMutex);
-                _UserToconn.erase(_connToUser[it->first]);
-                _connToUser.erase(it->first);
+                LOG_INFO << "Heartbeat timeout:" << it->first->peerAddress().toIpPort();
+                deadConns.push_back(it->first);
+                _conns.erase(it->first);
+                it = _LastPong.erase(it);
             }
-            _conns.erase(it->first);
-            it = _LastPong.erase(it);
-        }
-        else
-        {
-            ++it;
+            else
+            {
+                ++it;
+            }
         }
     }
 
     for(auto& c : deadConns)
     {
+        {
+            std::lock_guard<std::mutex> lock(_onlineMutex);
+            auto it = _connToUser.find(c);
+            if(it != _connToUser.end())
+            {
+                _UserToconn.erase(it->second);
+                _connToUser.erase(it);
+            }
+        }
         c->shutdown();
     }
 }

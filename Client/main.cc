@@ -16,7 +16,7 @@ const int YMAXSENDBYTE = 65536;
 void ySendFile(ChatClient* client , std::string yPath ,std::string to_somebody ,std::string groupname, int resumeOffset)
 {
     size_t p = yPath.find_last_of('/');
-    std::string y_filename = (p == std::string::npos)  ? yPath : yPath.substr(p+1);
+    std::string y_filename = (p == std::string::npos)  ? yPath : yPath.substr(p+1);//npos表示没找到
     Json::Value JsData;
     JsData["filename"] = y_filename;
     JsData["to"]=to_somebody;

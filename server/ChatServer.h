@@ -49,6 +49,7 @@ private:
     static constexpr double HeartBeatInterval = 10.0;
     static constexpr double HeartBeatTimeout = 15.0;
     mutable std::mutex _onlineMutex;
+    mutable std::mutex _connMutex;
     
     
 };

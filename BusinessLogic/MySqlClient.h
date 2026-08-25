@@ -4,6 +4,18 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <queue>
+#include <condition_variable>
+#include <thread>
+#include <atomic>
+struct WriteItem
+{
+    Json::Value body;
+    std::string username;
+    std::string friendname;
+    std::string groupid;
+    bool offline;
+};
 class MySqlClient
 {
 public:
@@ -34,5 +46,13 @@ private:
     std::string _DataBaseName;
     std::mutex _mutex;
     int _port;
+    std::queue<WriteItem> _writeQueue;
+    std::mutex _queueMutex;
+    std::condition_variable _queueCond;
+    std::thread _writerThread;
+    bool _running = false;
+    void writerLoop();
+    std::atomic<bool> _writing{false};
+    void flushAll();
 
 };
