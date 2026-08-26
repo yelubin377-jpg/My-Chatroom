@@ -139,7 +139,7 @@ muduo::net::TcpConnectionPtr ChatServer::GetconnByUser(const std::string& userna
 }
 void ChatServer::start()
 {
-    _heartbeatTimerId  = _loop->runEvery(HeartBeatInterval,std::bind(&ChatServer::onHeartbeat,this));
+    // _heartbeatTimerId  = _loop->runEvery(HeartBeatInterval,std::bind(&ChatServer::onHeartbeat,this));
     //
     _server.setThreadNum(4);
     //
