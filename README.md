@@ -24,13 +24,13 @@
 
 服务器架构设计
 
-![Image_1787813663409_646_edit_475910500421318](Image_1787813663409_646_edit_475910500421318.png)
+![chat_server](chat_server.png)
 
 
 
 客户端架构设计
 
-![client_architecture.drawio (4)](client_architecture.drawio (4).png)
+![chat_client](chat_client.png)
 
 ## 编译及运行
 
