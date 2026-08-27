@@ -24,13 +24,13 @@
 
 服务器架构设计
 
-![chat_server](chat_server.png)
+![chat_server](source/chat_server.png)
 
 
 
 客户端架构设计
 
-![chat_client](chat_client.png)
+![chat_client](source/chat_client.png)
 
 ## 编译及运行
 
