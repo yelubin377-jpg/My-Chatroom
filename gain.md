@@ -329,9 +329,9 @@ ZSet 有序集合每个元素带 score 按分数排序（底层跳表），做�
 
 ## muduo 各对象的关系
 
-## <img src="../learn/muduo.png" alt="muduo" style="zoom:67%;" />
+## <img src="source/muduo.png" alt="muduo" style="zoom:67%;" />
 
-##### <img src="../learn/muduo2.png" alt="muduo2" style="zoom:67%;" />
+##### <img src="source/muduo2.png" alt="muduo2" style="zoom:67%;" />
 
 ## 主从 Reactor  VS 单线程 ？
 
