@@ -319,7 +319,7 @@ ZSet 有序集合每个元素带 score 按分数排序（底层跳表），做�
 
 ##### 三大经典问题：
 
-###### 缓存穿透是请求的数据压根不存在，Redis 每次都 miss 直接打到数据库，解决用布隆过滤器或缓存空对象；
+缓存穿透是请求的数据压根不存在，Redis 每次都 miss 直接打到数据库，解决用布隆过滤器或缓存空对象；
 
 ###### 缓存雪崩是大量缓存同一时间过期瞬间全打到数据库，解决用过期时间加随机值、热点数据不过期；
 
@@ -329,13 +329,9 @@ ZSet 有序集合每个元素带 score 按分数排序（底层跳表），做�
 
 ## muduo 各对象的关系
 
+## <img src="../learn/muduo.png" alt="muduo" style="zoom:67%;" />
 
-
-<img src="/home/michael-377/桌面/learn/muduo.png" alt="muduo" style="zoom:67%;" />
-
-
-
-<img src="/home/michael-377/桌面/learn/muduo2.png" alt="muduo2" style="zoom:67%;" />
+##### <img src="../learn/muduo2.png" alt="muduo2" style="zoom:67%;" />
 
 ## 主从 Reactor  VS 单线程 ？
 
@@ -346,3 +342,14 @@ ZSet 有序集合每个元素带 score 按分数排序（底层跳表），做�
 那么,有什么好处呢？
 
 首先就是隔离，一个连接慢只卡它所在的子线程，别的子线程照常跑；其次，我的chatroom是有心跳一直在监督的，一旦阻塞，对应的客户端直接会被断开连接，而运用主从Reactor后，不易阻塞，主线程专门处理连接，业务再忙也不影响接新连接。
+
+
+
+
+
+
+
+
+
+
+
